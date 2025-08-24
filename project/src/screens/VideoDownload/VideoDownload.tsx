@@ -99,13 +99,24 @@ const VideoDownload = () => {
     setLoading(true);
 
     try {
+      // const response = await fetch(`${BACKEND_URL}/create-video`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ link, start, end }),
+      // });
+      // if (response.status === 200) {
+      //   window.open(`${BACKEND_URL}/download-video`, "_self");
+      // }
       const response = await fetch(`${BACKEND_URL}/create-video`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ link, start, end }),
       });
+      const data = await response.json();
+
       if (response.status === 200) {
-        window.open(`${BACKEND_URL}/download-video`, "_self");
+        console.log("File ready:", data.downloadUrl);
+        window.open(data.downloadUrl, "_self");
       }
     } catch (error) {
       console.error("Error downloading the video:", error);

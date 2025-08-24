@@ -22,7 +22,7 @@ import imageRouter from "./routes/images.js";
 import userRoutes from "./routes/users.js";
 import { db } from "./connection/connect.js";
 import { google } from "googleapis";
-import path from "path"
+import path from "path";
 dotenv.config();
 
 // const isProduction = process.env.NODE_ENV === "production";
@@ -31,23 +31,22 @@ const PORT = process.env.PORT || 8080;
 const __dirname = new URL(".", import.meta.url).pathname;
 
 const useHTTPS = false;
-const server =
-  useHTTPS
-    ? (() => {
-        try {
-          return https.createServer(
-            {
-              key: fs.readFileSync("./ssl/key.pem"),
-              cert: fs.readFileSync("./ssl/cert.pem"),
-            },
-            app
-          );
-        } catch (err) {
-          console.error("⚠️ Failed to load SSL certs. Falling back to HTTP.");
-          return http.createServer(app);
-        }
-      })()
-    : http.createServer(app);
+const server = useHTTPS
+  ? (() => {
+      try {
+        return https.createServer(
+          {
+            key: fs.readFileSync("./ssl/key.pem"),
+            cert: fs.readFileSync("./ssl/cert.pem"),
+          },
+          app
+        );
+      } catch (err) {
+        console.error("⚠️ Failed to load SSL certs. Falling back to HTTP.");
+        return http.createServer(app);
+      }
+    })()
+  : http.createServer(app);
 
 // App
 app.use((req, res, next) => {
@@ -198,33 +197,53 @@ app.get("/wix-inventory", async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
 app.use("/temp", express.static(path.join(__dirname, "temp")));
-app.use("/create-video", (req, res) => {
+// app.use("/create-video", (req, res) => {
+//   console.log("received");
+//   const { link, start, end } = req.body;
+//   if (!link || !start || !end) {
+//     return res.status(400).json({ error: "Missing required parameters" });
+//   }
+//   const pythonProcess = spawn("python3", ["video.py", link, start, end]);
+//   pythonProcess.stdout.on("data", (data) => {
+//     console.log(`stdout: ${data.toString()}`);
+//   });
+//   pythonProcess.stderr.on("data", (data) => {
+//     console.error(`stderr: ${data.toString()}`);
+//   });
+//   pythonProcess.on("close", (code) => {
+//     console.log(`Python script exited with code ${code}`);
+//     res.status(200).json({ message: "Processing started" });
+//   });
+// });
+
+app.post("/create-video", (req, res) => {
   console.log("received");
   const { link, start, end } = req.body;
   if (!link || !start || !end) {
     return res.status(400).json({ error: "Missing required parameters" });
   }
+
   const pythonProcess = spawn("python3", ["video.py", link, start, end]);
+
   pythonProcess.stdout.on("data", (data) => {
     console.log(`stdout: ${data.toString()}`);
   });
+
   pythonProcess.stderr.on("data", (data) => {
     console.error(`stderr: ${data.toString()}`);
   });
+
   pythonProcess.on("close", (code) => {
     console.log(`Python script exited with code ${code}`);
-    res.status(200).json({ message: "Processing started" });
+    if (code === 0) {
+      // ✅ tell frontend the file is ready
+      res.status(200).json({ downloadUrl: `${process.env.BACKEND_URL}/download-video` });
+    } else {
+      res.status(500).json({ error: "Video processing failed" });
+    }
   });
-
-})
+});
 
 app.get("/download-video", (req, res) => {
   console.log("download");
