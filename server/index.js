@@ -239,6 +239,7 @@ app.post("/create-video", (req, res) => {
     console.log(`Python script exited with code ${code}`);
     if (code === 0) {
       // ✅ tell frontend the file is ready
+      console.log(`${BACKEND_URl}/download-video`)
       res.status(200).json({ downloadUrl: `${BACKEND_URl}/download-video` });
     } else {
       res.status(500).json({ error: "Video processing failed" });

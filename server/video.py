@@ -77,7 +77,7 @@ def main():
         except subprocess.CalledProcessError as e:
             print(f'Error trimming video: {e}')
     
-    format_option = 2
+    format_option = 1
     video_path = "./temp/video.mp4"
     
     # Cut -> Exact timing -> Shows black screen till first keyframe
