@@ -223,7 +223,7 @@ app.post("/api/create-video", (req, res) => {
       const progress = parseFloat(progressStr);
       if (type.startsWith("video") || type.startsWith("audio")) {
         console.log(type, progress);
-        io.emit("video-progress", { type, progress });
+        getIO().emit("video-progress", { type, progress });
       }
     }
   });
@@ -242,13 +242,13 @@ app.post("/api/create-video", (req, res) => {
       res
         .status(200)
         .json({ downloadUrl: `${BACKEND_URL}/api/download-video` });
-      io.emit("video-complete", {
+      getIO().emit("video-complete", {
         success: true,
         downloadUrl: `${BACKEND_URL}/api/download-video`,
       });
     } else {
       res.status(500).json({ error: "Video processing failed" });
-      io.emit("video-complete", { success: false, downloadUrl: null });
+      getIO().emit("video-complete", { success: false, downloadUrl: null });
     }
   });
 });
@@ -257,7 +257,7 @@ app.get("/api/download-video", (req, res) => {
   console.log("download");
   const filePath = path.join(__dirname, "temp", "clip.mp4");
   res.download(filePath, "clip.mp4", (err) => {
-    if (err) {
+    if (err && !res.headersSent) {
       console.error("Error downloading the file:", err);
       res.status(500).send("Error downloading the file.");
     }
