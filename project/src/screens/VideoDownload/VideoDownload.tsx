@@ -53,10 +53,12 @@ const VideoDownload = () => {
       const end_time = end.trim();
       if (!validateTimeFormat(start_time) || !validateTimeFormat(end_time)) {
         toast.error("Invalid timestamp format");
+        setProgressLoading(false);
         return;
       }
       if (link.trim() === "") {
         toast.error("No link provided");
+        setProgressLoading(false);
         return;
       }
       setProgressBar(0);
