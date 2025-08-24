@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useModal1Store, useModal2Store } from "@/store/useModalStore";
 import { useLeftBarOpenStore } from "@/store/useLeftBarOpenStore";
 import { logout } from "@/util/auth";
+import axios from "axios";
 
 export interface User {
   id: string;
@@ -67,7 +68,10 @@ export const AuthContextProvider = ({ children }: AuthContextProviderProps) => {
       queryKey: ["currentUser"],
       queryFn: async () => {
         const res = await makeRequest.get("/api/users/current");
+        // const res = axios.get("https://general-project-rust.vercel.app/api/users/current")
         return res.data;
+        // console.log(res)
+        // return null
       },
       staleTime: 1000 * 60 * 5,
       gcTime: 1000 * 60 * 5,

@@ -8,8 +8,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import "../styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "TSA Inventory",
-  description: "TSA Inventory",
+  title: "YouTube Download",
+  description: "YouTube Download",
 };
 
 export default async function RootLayout({
