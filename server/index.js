@@ -23,6 +23,7 @@ import userRoutes from "./routes/users.js";
 import { db } from "./connection/connect.js";
 import { google } from "googleapis";
 import path from "path";
+import { BACKEND_URl } from "./config.js";
 dotenv.config();
 
 // const isProduction = process.env.NODE_ENV === "production";
@@ -238,7 +239,7 @@ app.post("/create-video", (req, res) => {
     console.log(`Python script exited with code ${code}`);
     if (code === 0) {
       // ✅ tell frontend the file is ready
-      res.status(200).json({ downloadUrl: `${process.env.BACKEND_URL}/download-video` });
+      res.status(200).json({ downloadUrl: `${BACKEND_URl}/download-video` });
     } else {
       res.status(500).json({ error: "Video processing failed" });
     }
