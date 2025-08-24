@@ -56,6 +56,12 @@ type AppContextType = {
   submitProductForm: () => Promise<boolean>;
   resetTimer: (fast: boolean) => void;
   checkForUnsavedChanges: () => boolean;
+  progressBar: number;
+  setProgressBar: React.Dispatch<React.SetStateAction<number>>;
+  progressType: string;
+  setProgressType: React.Dispatch<React.SetStateAction<string>>;
+  progressLoading: boolean;
+  setProgressLoading: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 export type FileImage = {
@@ -176,7 +182,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const newFileName = file.name.slice(0, lastDotIndex);
         let sanitizedFileName = newFileName.replace(/[^a-zA-Z0-9]/g, "_");
-        const extention = file.type.startsWith("image/") ? "webp" : file.name.split(".").pop();
+        const extention = file.type.startsWith("image/")
+          ? "webp"
+          : file.name.split(".").pop();
         const timeStamp = getCurrentTimestamp();
 
         sanitizedFileName = `${timeStamp}--${sanitizedFileName}.${extention}`;
@@ -445,6 +453,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const [progressBar, setProgressBar] = useState<number>(0);
+  const [progressType, setProgressType] = useState<string>("Video");
+  const [progressLoading, setProgressLoading] = useState<boolean>(false);
+
   return (
     <AppContext.Provider
       value={{
@@ -475,6 +487,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         submitProductForm,
         resetTimer,
         checkForUnsavedChanges,
+        progressBar,
+        setProgressBar,
+        progressType,
+        setProgressType,
+        progressLoading,
+        setProgressLoading,
       }}
     >
       {children}

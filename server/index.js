@@ -23,7 +23,8 @@ import userRoutes from "./routes/users.js";
 import { db } from "./connection/connect.js";
 import { google } from "googleapis";
 import path from "path";
-import { BACKEND_URl } from "./config.js";
+import { BACKEND_URL } from "./config.js";
+import { initializeWebSocket, getIO } from "./connection/websocket.js";
 dotenv.config();
 
 // const isProduction = process.env.NODE_ENV === "production";
@@ -199,55 +200,60 @@ app.get("/wix-inventory", async (req, res) => {
 });
 
 app.use("/temp", express.static(path.join(__dirname, "temp")));
-// app.use("/create-video", (req, res) => {
-//   console.log("received");
-//   const { link, start, end } = req.body;
-//   if (!link || !start || !end) {
-//     return res.status(400).json({ error: "Missing required parameters" });
-//   }
-//   const pythonProcess = spawn("python3", ["video.py", link, start, end]);
-//   pythonProcess.stdout.on("data", (data) => {
-//     console.log(`stdout: ${data.toString()}`);
-//   });
-//   pythonProcess.stderr.on("data", (data) => {
-//     console.error(`stderr: ${data.toString()}`);
-//   });
-//   pythonProcess.on("close", (code) => {
-//     console.log(`Python script exited with code ${code}`);
-//     res.status(200).json({ message: "Processing started" });
-//   });
-// });
+app.post("/api/create-video", (req, res) => {
+  const { link, start_time, end_time } = req.body;
+  console.log("");
+  console.log("Received ", link, start_time, end_time);
 
-app.post("/create-video", (req, res) => {
-  console.log("received");
-  const { link, start, end } = req.body;
-  if (!link || !start || !end) {
+  if (!link) {
     return res.status(400).json({ error: "Missing required parameters" });
   }
 
-  const pythonProcess = spawn("python3", ["video.py", link, start, end]);
+  const pythonProcess = spawn("python3", [
+    "video.py",
+    link,
+    start_time,
+    end_time,
+  ]);
 
   pythonProcess.stdout.on("data", (data) => {
-    console.log(`stdout: ${data.toString()}`);
+    const output = data.toString().trim();
+    const [type, progressStr] = output.split(":");
+    if (!isNaN(progressStr)) {
+      const progress = parseFloat(progressStr);
+      if (type.startsWith("video") || type.startsWith("audio")) {
+        console.log(type, progress);
+        io.emit("video-progress", { type, progress });
+      }
+    }
   });
 
   pythonProcess.stderr.on("data", (data) => {
     console.error(`stderr: ${data.toString()}`);
   });
 
+  let responded = false;
   pythonProcess.on("close", (code) => {
-    console.log(`Python script exited with code ${code}`);
+    console.log(`Python exited ${code}`);
+    if (responded) return;
+    responded = true;
+
     if (code === 0) {
-      // ✅ tell frontend the file is ready
-      console.log(`${BACKEND_URl}/download-video`)
-      res.status(200).json({ downloadUrl: `${BACKEND_URl}/download-video` });
+      res
+        .status(200)
+        .json({ downloadUrl: `${BACKEND_URL}/api/download-video` });
+      io.emit("video-complete", {
+        success: true,
+        downloadUrl: `${BACKEND_URL}/api/download-video`,
+      });
     } else {
       res.status(500).json({ error: "Video processing failed" });
+      io.emit("video-complete", { success: false, downloadUrl: null });
     }
   });
 });
 
-app.get("/download-video", (req, res) => {
+app.get("/api/download-video", (req, res) => {
   console.log("download");
   const filePath = path.join(__dirname, "temp", "clip.mp4");
   res.download(filePath, "clip.mp4", (err) => {
@@ -257,6 +263,24 @@ app.get("/download-video", (req, res) => {
     }
   });
 });
+
+// Process signals for web socket
+const io = initializeWebSocket(server);
+const shutdown = () => {
+  console.log("Shutting down server...");
+  io.sockets.sockets.forEach((socket) => {
+    socket.disconnect(true);
+  });
+  io.close(() => {
+    console.log("WebSocket server closed.");
+  });
+  server.close(() => {
+    console.log("HTTP server closed.");
+    process.exit(0);
+  });
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 server.listen(PORT, () => {
   console.log("API is running on port " + PORT);

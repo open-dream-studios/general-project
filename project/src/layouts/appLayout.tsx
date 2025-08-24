@@ -32,6 +32,8 @@ import {
 import CustomToast from "@/components/CustomToast";
 import { usePageLayoutRefStore } from "@/store/usePageLayoutStore";
 import LandingPage from "@/screens/Landing/LandingPage/LandingPage";
+import { BACKEND_URL } from "@/util/config";
+import { toast } from "react-toastify";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -54,16 +56,56 @@ const AppRoot = ({ children }: { children: ReactNode }) => {
   const queryClient = useQueryClient();
   const queryClientRef = useRef(queryClient);
   const { currentUser, isLoadingCurrentUserData } = useContext(AuthContext);
+  const { setProgressBar, setProgressType, setProgressLoading } =
+    useAppContext();
+  const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
   const setLeftBarOpen = useLeftBarOpenStore(
     (state: any) => state.setLeftBarOpen
   );
+
   useEffect(() => {
     const isDesktop = window.innerWidth > 1024;
     setLeftBarOpen(isDesktop);
   }, [setLeftBarOpen]);
+
+  useEffect(() => {
+    if (!socketRef.current) {
+      const socket = io(BACKEND_URL);
+      socketRef.current = socket;
+      socket.connect();
+      socket.on("video-progress", (data) => {
+        const { type, progress } = data;
+        setProgressBar(progress);
+        setProgressType(type);
+      });
+
+      socket.on("video-complete", (data) => {
+        if (data.success) {
+          console.log("✅ Video finished successfully!", data.downloadUrl);
+          toast.success("Video download complete");
+          window.open(data.downloadUrl, "_self");
+        } else {
+          console.log("❌ Video processing failed.");
+          toast.error("Video download failed");
+        }
+        setProgressLoading(false);
+        setProgressBar(0);
+        setProgressType("video");
+      });
+
+      socket.on("connect", () => console.log(`Connected: ${socket.id}`));
+      socket.on("disconnect", () => console.log("Disonnected"));
+    }
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     queryClient.invalidateQueries({ queryKey: ["currentUser"] });

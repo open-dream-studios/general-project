@@ -30,8 +30,8 @@ const nextConfig = {
       {
         source: "/api/:path*",
         destination:
-          "https://general-project-production.up.railway.app/api/:path*",
-          // "http://localhost:8080/api/:path*",
+          // "https://general-project-production.up.railway.app/api/:path*",
+          "http://localhost:8080/api/:path*",
       },
     ];
   },

@@ -1,128 +1,79 @@
-// import { BACKEND_URL } from "@/util/config";
-// import { useState } from "react";
-
-// const VideoDownload = () => {
-//   const [loading, setLoading] = useState<boolean>(false);
-//   const [link, setLink] = useState<string>(
-//     "https://www.youtube.com/watch?v=njX2bu-_Vw4"
-//   );
-//   const [start, setStart] = useState<string>("00:24");
-//   const [end, setEnd] = useState<string>("00:40");
-
-//   const handleDownload = async () => {
-//     setLoading(true);
-
-//     try {
-//       const response = await fetch(`${BACKEND_URL}/create-video`, {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({
-//           link: link,
-//           start: start,
-//           end: end,
-//         }),
-//       });
-//       const responseData = await response.json();
-//       console.log(responseData);
-//       if (response.status === 200) {
-//         console.log("downloading");
-//         window.open(`${BACKEND_URL}/download-video`, "_self");
-//       }
-//     } catch (error) {
-//       console.error("Error downloading the video:", error);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-//   return (
-//     <div className="p-4 flex flex-col gap-[20px] pl-[30px] pt-[30px]">
-//       <input
-//         type="text"
-//         value={link}
-//         className="rounded-[4px] py-[3px] pl-[6px]"
-//         style={{ border: "1px solid grey" }}
-//         onChange={(e: any) => {
-//           setLink(e.target.value);
-//         }}
-//       />
-//       <input
-//         type="text"
-//         value={start}
-//         className="rounded-[4px] py-[3px] pl-[6px]"
-//         style={{ border: "1px solid grey" }}
-//         onChange={(e: any) => {
-//           setStart(e.target.value);
-//         }}
-//       />
-//       <input
-//         type="text"
-//         value={end}
-//         className="rounded-[4px] py-[3px] pl-[6px]"
-//         style={{ border: "1px solid grey" }}
-//         onChange={(e: any) => {
-//           setEnd(e.target.value);
-//         }}
-//       />
-//       <button
-//         onClick={handleDownload}
-//         className={`dim hover:brightness-75 cursor-pointer px-4 py-2 text-white rounded ${
-//           loading ? "bg-gray-500" : "bg-[#1B3167]"
-//         }`}
-//         disabled={loading}
-//       >
-//         {loading ? "Downloading..." : "Download Video"}
-//       </button>
-//     </div>
-//   );
-// };
-
-// export default VideoDownload;
-
-import { BACKEND_URL } from "@/util/config";
 import { useContext, useState } from "react";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { appTheme } from "@/util/appTheme";
 import { AuthContext } from "@/contexts/authContext";
+import { toast } from "react-toastify";
+import { makeRequest } from "@/util/axios";
+import { useAppContext } from "@/contexts/appContext";
 
 const VideoDownload = () => {
   const { currentUser } = useContext(AuthContext);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [link, setLink] = useState<string>(
-    "https://www.youtube.com/watch?v=njX2bu-_Vw4"
-  );
-  const [start, setStart] = useState<string>("00:24");
-  const [end, setEnd] = useState<string>("00:40");
+  const { progressBar, progressType, setProgressBar, setProgressType, setProgressLoading, progressLoading } =
+    useAppContext();
+  const [link, setLink] = useState<string>("");
+  const [start, setStart] = useState<string>("");
+  const [end, setEnd] = useState<string>("");
 
   const handleDownload = async () => {
-    setLoading(true);
+    setProgressLoading(true);
+    function validateTimeFormat(str: string): boolean {
+      if (str === "") return true;
+      const parts = str.split(":").map(Number);
+
+      // Seconds only (S or SS)
+      if (parts.length === 1) {
+        const [s] = parts;
+        return Number.isInteger(s) && s >= 0 && s < 60;
+      }
+
+      // MM:SS or M:SS
+      if (parts.length === 2) {
+        const [a, b] = parts;
+        if (!Number.isInteger(a) || !Number.isInteger(b)) return false;
+        return a >= 0 && a < 60 && b >= 0 && b < 60;
+      }
+
+      // HH:MM:SS or H:MM:SS
+      if (parts.length === 3) {
+        const [h, m, s] = parts;
+        if (
+          !Number.isInteger(h) ||
+          !Number.isInteger(m) ||
+          !Number.isInteger(s)
+        )
+          return false;
+        return h >= 0 && m >= 0 && m < 60 && s >= 0 && s < 60;
+      }
+      return false;
+    }
 
     try {
-      // const response = await fetch(`${BACKEND_URL}/create-video`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ link, start, end }),
-      // });
-      // if (response.status === 200) {
-      //   window.open(`${BACKEND_URL}/download-video`, "_self");
-      // }
-      const response = await fetch(`${BACKEND_URL}/create-video`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ link, start, end }),
-      });
-      const data = await response.json();
-
-      if (response.status === 200) {
-        console.log("File ready:", data.downloadUrl);
-        window.open(data.downloadUrl, "_self");
+      const start_time = start.trim();
+      const end_time = end.trim();
+      if (!validateTimeFormat(start_time) || !validateTimeFormat(end_time)) {
+        toast.error("Invalid timestamp format");
+        return;
       }
+      if (link.trim() === "") {
+        toast.error("No link provided");
+        return;
+      }
+      setProgressBar(0);
+      setProgressType("video");
+
+      await makeRequest.post(
+        "/api/create-video",
+        {
+          link,
+          start_time,
+          end_time,
+        },
+        { timeout: 30 * 60 * 1000 }
+      );
     } catch (error) {
       console.error("Error downloading the video:", error);
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   if (!currentUser) return null;
@@ -206,15 +157,46 @@ const VideoDownload = () => {
         <motion.button
           whileTap={{ scale: 0.97 }}
           onClick={handleDownload}
-          disabled={loading}
-          className={`dim hover:brightness-75 cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-white shadow-md transition ${
-            loading
+          disabled={progressLoading}
+          className={`relative dim hover:brightness-75 cursor-pointer w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-medium text-white shadow-md transition ${
+            progressLoading
               ? "bg-gray-400 cursor-not-allowed"
               : "bg-indigo-600 hover:bg-indigo-700"
           }`}
         >
-          {loading ? "Downloading..." : "Download Video"}
-          {!loading && <Download size={18} />}
+          {progressLoading ? `Downloading ${progressType}...` : "Download Video"}
+          {!progressLoading && <Download size={18} />}
+
+          {progressLoading && (
+            <div className="absolute right-[18px] w-6 h-6 ml-2 flex items-center justify-center">
+              <svg className="absolute 0" viewBox="0 0 36 36">
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="4"
+                  strokeOpacity="0.4"
+                />
+                <circle
+                  cx="18"
+                  cy="18"
+                  r="16"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="4"
+                  strokeLinecap="butt"
+                  strokeDasharray={2 * Math.PI * 16}
+                  strokeDashoffset={
+                    2 * Math.PI * 16 * (1 - (progressBar * 0.987) / 100)
+                  }
+                  transform="rotate(-90 18 18)"
+                  className="transition-all duration-300"
+                />
+              </svg>
+            </div>
+          )}
         </motion.button>
       </motion.div>
     </div>
