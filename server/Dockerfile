@@ -3,17 +3,17 @@ FROM node:18
 # Install Python + pip
 RUN apt-get update && apt-get install -y python3 python3-pip && rm -rf /var/lib/apt/lists/*
 
-# Set workdir
 WORKDIR /app
 
 # Install Node deps
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy app
-COPY . .
+# Copy requirements and install Python deps
+COPY requirements.txt ./
+RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
 
-# Install Python deps
-RUN pip3 install -r requirements.txt
+# Copy the rest of the app
+COPY . .
 
 CMD ["npm", "start"]
