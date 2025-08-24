@@ -4,7 +4,6 @@ import nodemailer from "nodemailer";
 import { db } from "../connection/connect.js";
 import { generateId } from "../functions/data.js";
 import dotenv from "dotenv";
-import { getSheetSharedEmails } from "../functions/google.js";
 import admin from "../connection/firebaseAdmin.js";
 dotenv.config();
 
