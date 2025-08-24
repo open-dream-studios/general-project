@@ -1,0 +1,25 @@
+# General ignores
+node_modules/
+.env
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Build files
+.next/
+dist/
+build/
+
+# Secrets
+**/serviceAccountKey.json
+**/.env
+**/ssl/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
